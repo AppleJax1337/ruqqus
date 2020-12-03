@@ -216,6 +216,9 @@ def submit_post(v):
     url = request.form.get("url", "")
 
     board = get_guild(request.form.get('board', 'general'), graceful=True)
+
+    is_yankable = bool(request.form.get("is_yankable", False))
+
     if not board:
         board = get_guild('general')
 
@@ -254,6 +257,21 @@ def submit_post(v):
                                                  ), 400),
                 "api": lambda: ({"error": "500 character limit for titles"}, 400)
                 }
+
+
+    if isinstance(is_yankable, bool) == False:
+        return {"html": lambda: (render_template("submit.html",
+                                                 v=v,
+                                                 error="Error: invalid value for yankability.",
+                                                 title=title[0:500],
+                                                 url=url,
+                                                 body=request.form.get(
+                                                     "body", ""),
+                                                 b=board
+                                                 ), 400),
+                "api": lambda: ({"error": "is_yankable must be either strictly equal to true or strictly equal to false."}, 400)
+                }
+
 
     parsed_url = urlparse(url)
     if not (parsed_url.scheme and parsed_url.netloc) and not request.form.get(
@@ -554,7 +572,8 @@ def submit_post(v):
                           post_public=not board.is_private,
                           repost_id=repost.id if repost else None,
                           is_offensive=is_offensive,
-                          is_politics=is_politics
+                          is_politics=is_politics,
+                          is_yankable=is_yankable
                           )
 
     g.db.add(new_post)
@@ -747,6 +766,24 @@ def toggle_post_nsfl(pid, v):
         abort(403)
 
     post.is_nsfl = not post.is_nsfl
+    g.db.add(post)
+
+    return "", 204
+
+
+@app.route("/api/toggle_post_yankable/<pid>", methods=["POST"])
+@app.route("/api/v1/toggle_post_yankable/<pid>", methods=["POST"])
+@is_not_banned
+@api("update")
+@validate_formkey
+def toggle_post_yankable(pid, v):
+
+    post = get_post(pid)
+
+    if not post.author_id == v.id:
+        abort(403)
+
+    post.is_yankable = not post.is_yankable
     g.db.add(post)
 
     return "", 204

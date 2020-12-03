@@ -376,6 +376,9 @@ def mod_take_pid(pid, v):
     board = get_board(bid)
     post = get_post(pid)
 
+    if post.is_yankable == False:
+        return jsonify({'error': "That post is unyankable."}), 403
+
     if board.is_banned:
         return jsonify({'error': f"+{board.name} is banned. You can't yank anything there."}), 403
 
